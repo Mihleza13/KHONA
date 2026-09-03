@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* KHONA accent — a confident warm rose/magenta, replacing the previous
+   cyan across the whole app. Tailwind v4 generates every `cyan-*`
+   utility class from these variables, so this single override reskins
+   every existing bg-cyan-*, text-cyan-*, border-cyan-* usage app-wide
+   without needing to touch each component. */
+@theme {
+  --color-cyan-50: #fff1f2;
+  --color-cyan-100: #ffe4e6;
+  --color-cyan-200: #fecdd3;
+  --color-cyan-300: #fda4af;
+  --color-cyan-400: #fb7185;
+  --color-cyan-500: #f43f5e;
+  --color-cyan-600: #e11d48;
+  --color-cyan-700: #be123c;
+  --color-cyan-800: #9f1239;
+  --color-cyan-900: #881337;
+  --color-cyan-950: #4c0519;
+}
+
 @layer base {
   :root {
     --khona-bg: #090d14;
@@ -8,9 +27,9 @@
     --khona-border: #222e40;
     --khona-text: #f8fafc;
     --khona-text-muted: #94a3b8;
-    --khona-cyan: #06b6d4;
-    --khona-cyan-hover: #22d3ee;
-    --khona-cyan-glow: rgba(6, 182, 212, 0.25);
+    --khona-cyan: #f43f5e;
+    --khona-cyan-hover: #fb7185;
+    --khona-cyan-glow: rgba(244, 63, 94, 0.25);
   }
 
   html.dark {
@@ -20,8 +39,8 @@
     --khona-border: #222e40;
     --khona-text: #f8fafc;
     --khona-text-muted: #94a3b8;
-    --khona-cyan: #06b6d4;
-    --khona-cyan-hover: #22d3ee;
+    --khona-cyan: #f43f5e;
+    --khona-cyan-hover: #fb7185;
   }
 
   html:not(.dark) {
@@ -31,8 +50,8 @@
     --khona-border: #e2e8f0;
     --khona-text: #090d14;
     --khona-text-muted: #64748b;
-    --khona-cyan: #0891b2;
-    --khona-cyan-hover: #06b6d4;
+    --khona-cyan: #e11d48;
+    --khona-cyan-hover: #f43f5e;
   }
 
   body {
