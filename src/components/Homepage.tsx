@@ -10,6 +10,7 @@ import {
   Pill,
 } from 'lucide-react';
 import type { ClinicSession } from '../types';
+import { WESTERN_CAPE_PILOT_CLINICS } from '../data/communityData';
 import { useTheme } from '../theme/ThemeContext';
 import { useTranslation } from '../i18n/LanguageContext';
 
@@ -36,6 +37,9 @@ export const Homepage: React.FC<HomepageProps> = ({
   const fullName = activeSession?.patient?.fullName || 'Patient';
   const firstName = fullName.split(' ')[0] || fullName;
   const recentVisit = activeSession?.patient?.visits?.[activeSession.patient.visits.length - 1];
+  const activeFacilityName = WESTERN_CAPE_PILOT_CLINICS.find(
+    (c) => c.id === activeSession?.facilityId
+  )?.name;
 
   const cardBase = isDark
     ? 'bg-[#12161d] border-zinc-800 text-white'
@@ -48,9 +52,12 @@ export const Homepage: React.FC<HomepageProps> = ({
         <h1 className="text-[26px] font-semibold tracking-tight leading-tight">
           Hi {firstName}
         </h1>
-        <p className="text-xs text-zinc-500 font-normal mt-0.5">
-          {activeSession?.practitioner?.name || 'Dr. N. Dlamini'} · Groote Schuur Hospital
-        </p>
+        {activeSession?.practitioner?.name && (
+          <p className="text-xs text-zinc-500 font-normal mt-0.5">
+            {activeSession.practitioner.name}
+            {activeFacilityName ? ` · ${activeFacilityName}` : ''}
+          </p>
+        )}
       </div>
 
       {/* Up next */}
@@ -68,14 +75,16 @@ export const Homepage: React.FC<HomepageProps> = ({
             <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm ${
               isDark ? 'bg-zinc-800 text-cyan-400' : 'bg-zinc-100 text-zinc-700'
             }`}>
-              {(activeSession?.practitioner?.name || 'ND').split(' ').map(w => w[0]).slice(-2).join('')}
+              {activeSession?.practitioner?.name
+                ? activeSession.practitioner.name.split(' ').map(w => w[0]).slice(-2).join('')
+                : <Stethoscope className="w-4.5 h-4.5" />}
             </div>
             <div className="min-w-0">
               <div className="text-sm font-semibold truncate">
                 {activeSession?.todayReason || "Today's visit"}
               </div>
               <div className="text-xs text-zinc-500 truncate">
-                {activeSession?.practitioner?.name || 'Dr. N. Dlamini'}
+                {activeSession?.practitioner?.name || 'Waiting on staff'}
                 {activeSession?.todayLocation ? ` · ${activeSession.todayLocation}` : ''}
               </div>
             </div>

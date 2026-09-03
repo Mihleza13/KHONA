@@ -111,18 +111,25 @@ export const saveStoredPatients = (patients: PatientProfile[]) => {
   }
 };
 
+// Practitioner details are never auto-filled and are never written to
+// localStorage. localStorage persists indefinitely on the device, which
+// on a shared clinic kiosk means the NEXT patient's browser session could
+// read a previous doctor's name / registration number. Instead we use
+// sessionStorage (cleared the moment the browser tab/kiosk session ends)
+// and require the practitioner to explicitly sign in each session — there
+// is no default doctor.
 const PRACTITIONER_STORAGE_KEY = 'khona_clinic_practitioner_profile_v1';
 
 export const DEFAULT_PRACTITIONER: PractitionerProfile = {
-  name: 'Dr. N. Dlamini',
-  practisingNumber: 'HPCSA MP-072891',
-  role: 'Attending Medical Officer',
-  facilityId: 'clinic-groote-schuur',
+  name: '',
+  practisingNumber: '',
+  role: '',
+  facilityId: '',
 };
 
 export const getStoredPractitioner = (): PractitionerProfile => {
   try {
-    const raw = localStorage.getItem(PRACTITIONER_STORAGE_KEY);
+    const raw = sessionStorage.getItem(PRACTITIONER_STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (err) {
     console.error('Failed to read practitioner profile:', err);
@@ -132,9 +139,17 @@ export const getStoredPractitioner = (): PractitionerProfile => {
 
 export const saveStoredPractitioner = (profile: PractitionerProfile) => {
   try {
-    localStorage.setItem(PRACTITIONER_STORAGE_KEY, JSON.stringify(profile));
+    sessionStorage.setItem(PRACTITIONER_STORAGE_KEY, JSON.stringify(profile));
   } catch (err) {
     console.error('Failed to persist practitioner profile:', err);
+  }
+};
+
+export const clearStoredPractitioner = () => {
+  try {
+    sessionStorage.removeItem(PRACTITIONER_STORAGE_KEY);
+  } catch (err) {
+    console.error('Failed to clear practitioner profile:', err);
   }
 };
 

@@ -34,7 +34,13 @@ interface ClinicSessionFlowProps {
   onCancel: () => void;
 }
 
-type AuthView = 'identify' | 'register' | 'intake' | 'practitioner_settings';
+type AuthView = 'identify' | 'register' | 'intake' | 'staff_pin' | 'practitioner_settings';
+
+// Lightweight deterrent so a patient using the kiosk can't casually open
+// or edit the attending practitioner's details. This is NOT real
+// authentication (there's no backend) — it just stops idle tampering.
+// Replace with proper staff login before any real deployment.
+const STAFF_PIN = '2468';
 
 export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
   onStartConsultation,
@@ -42,15 +48,22 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
 }) => {
   const { isDark } = useTheme();
 
-  // Practitioner State (persisted / editable)
+  // Practitioner State — never auto-filled. Kept in sessionStorage only
+  // (see patientSessionService), so nothing about the doctor survives
+  // past the current browser session.
   const [practitioner, setPractitioner] = useState<PractitionerProfile>(() => getStoredPractitioner());
-  const [editPractitionerName, setEditPractitionerName] = useState(practitioner.name || 'Dr. N. Dlamini');
-  const [editPractisingNumber, setEditPractisingNumber] = useState(practitioner.practisingNumber || 'HPCSA MP-072891');
-  const [editRole, setEditRole] = useState(practitioner.role || 'Attending Medical Officer');
-  const [selectedFacilityId, setSelectedFacilityId] = useState(practitioner.facilityId || 'clinic-groote-schuur');
+  const [editPractitionerName, setEditPractitionerName] = useState(practitioner.name || '');
+  const [editPractisingNumber, setEditPractisingNumber] = useState(practitioner.practisingNumber || '');
+  const [editRole, setEditRole] = useState(practitioner.role || '');
+  const [selectedFacilityId, setSelectedFacilityId] = useState(practitioner.facilityId || WESTERN_CAPE_PILOT_CLINICS[0].id);
+
+  // Staff PIN gate — must pass before viewing/editing practitioner details
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
 
   // Sub-view
   const [authView, setAuthView] = useState<AuthView>('identify');
+  const [launchError, setLaunchError] = useState<string | null>(null);
 
   // Patient identification
   const [identifierInput, setIdentifierInput] = useState<string>('');
@@ -121,9 +134,27 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
     setAuthView('identify');
   };
 
-  // Launch Active Consultation
+  // Staff PIN check — gates access to viewing/editing practitioner details
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput === STAFF_PIN) {
+      setPinInput('');
+      setPinError(null);
+      setAuthView('practitioner_settings');
+    } else {
+      setPinError('Incorrect staff PIN');
+    }
+  };
+
+  // Launch Active Consultation — strict: refuses to start without a
+  // properly signed-in practitioner. No silent fallback doctor.
   const handleLaunchConsultation = () => {
     if (!selectedPatient) return;
+    if (!practitioner.name?.trim()) {
+      setLaunchError('A staff member must sign in before a consultation can start.');
+      setAuthView('staff_pin');
+      return;
+    }
 
     const session: ClinicSession = {
       id: `clinic_sess_${Date.now()}`,
@@ -174,30 +205,34 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
           <div className={`p-6 sm:p-8 rounded-3xl border space-y-6 transition-all ${
             isDark ? 'bg-[#101722] border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
           }`}>
-            {/* Attending Practitioner Status Header */}
+            {/* Attending Practitioner Status Header — no doctor is shown
+                by default, and details (once set) never include the
+                registration number on this patient-facing screen. */}
             <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
               isDark ? 'bg-zinc-900/80 border-zinc-800 text-zinc-300' : 'bg-zinc-50 border-zinc-100 text-zinc-800'
             }`}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  practitioner.name ? 'bg-cyan-500/20 text-cyan-400' : 'bg-amber-500/20 text-amber-500'
+                }`}>
                   <Stethoscope className="w-4 h-4" />
                 </div>
                 <div>
                   <div className={`text-xs font-bold ${isDark ? 'text-zinc-200' : 'text-zinc-900'}`}>
-                    {practitioner.name || 'Dr. N. Dlamini'}
+                    {practitioner.name || 'No staff signed in'}
                   </div>
                   <div className="text-[11px] text-zinc-500 font-medium">
-                    {currentFacility.name} • {practitioner.practisingNumber}
+                    {practitioner.name ? currentFacility.name : 'Staff sign-in required to start a consultation'}
                   </div>
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={() => setAuthView('practitioner_settings')}
-                className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer"
+                onClick={() => setAuthView('staff_pin')}
+                className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer whitespace-nowrap"
               >
-                Change
+                {practitioner.name ? 'Change' : 'Staff sign-in'}
               </button>
             </div>
 
@@ -425,11 +460,20 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
                 Ready to begin
               </h2>
               <p className="text-xs text-zinc-500 font-normal">
-                {practitioner.name} · {currentFacility.name}
+                {practitioner.name ? `${practitioner.name} · ${currentFacility.name}` : 'Waiting on staff sign-in'}
               </p>
             </div>
 
-            {/* Launch Consultation Button */}
+            {launchError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{launchError}</span>
+              </div>
+            )}
+
+            {/* Launch Consultation Button — disabled until a practitioner
+                has actually signed in this session. Nothing launches on
+                a silent default. */}
             <div className="pt-1 flex items-center justify-between">
               <button
                 type="button"
@@ -445,12 +489,87 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
               <button
                 type="button"
                 onClick={handleLaunchConsultation}
-                className="px-6 py-3.5 rounded-2xl bg-zinc-950 dark:bg-white hover:opacity-90 text-white dark:text-zinc-950 font-semibold text-sm transition-all duration-150 flex items-center gap-2 cursor-pointer active:scale-[0.98]"
+                disabled={!practitioner.name?.trim()}
+                title={!practitioner.name?.trim() ? 'Staff must sign in first' : undefined}
+                className="px-6 py-3.5 rounded-2xl bg-zinc-950 dark:bg-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40 text-white dark:text-zinc-950 font-semibold text-sm transition-all duration-150 flex items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 <Stethoscope className="w-4 h-4" />
                 <span>Start consultation</span>
               </button>
             </div>
+          </div>
+        )}
+
+        {/* VIEW: STAFF PIN GATE — must pass before practitioner details
+            (even just a name/registration number) become visible or
+            editable. Keeps that information away from patients using
+            the same kiosk. */}
+        {authView === 'staff_pin' && (
+          <div className={`p-6 sm:p-8 rounded-3xl border space-y-6 transition-all ${
+            isDark ? 'bg-[#101722] border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">Staff sign-in</h2>
+                <p className="text-xs text-zinc-500 font-normal">
+                  Enter the clinic staff PIN to continue
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handlePinSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
+                  Staff PIN
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoFocus
+                  required
+                  value={pinInput}
+                  onChange={(e) => {
+                    setPinInput(e.target.value);
+                    if (pinError) setPinError(null);
+                  }}
+                  className={`w-full px-3.5 py-3 rounded-2xl border text-sm font-medium tracking-[0.3em] focus:outline-none transition-colors ${
+                    isDark
+                      ? 'bg-zinc-900 border-zinc-800 text-white focus:border-cyan-500'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-cyan-500'
+                  }`}
+                />
+              </div>
+
+              {pinError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{pinError}</span>
+                </div>
+              )}
+
+              <div className="pt-1 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinInput('');
+                    setPinError(null);
+                    setAuthView(selectedPatient ? 'intake' : 'identify');
+                  }}
+                  className="text-xs text-zinc-400 hover:text-white font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-zinc-950 dark:bg-white hover:opacity-90 text-white dark:text-zinc-950 font-semibold text-xs transition-all cursor-pointer"
+                >
+                  Unlock
+                </button>
+              </div>
+            </form>
           </div>
         )}
 

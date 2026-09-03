@@ -44,6 +44,7 @@ export const SubmitSignModal: React.FC<SubmitSignModalProps> = ({
   const [location, setLocation] = useState<BodyLocationType>('Chest / Torso');
   const [movement, setMovement] = useState<MovementType>('Up / Down');
   const [contributorName, setContributorName] = useState('');
+  const [stayAnonymous, setStayAnonymous] = useState(true);
 
   // Video recording
   const [isRecording, setIsRecording] = useState(false);
@@ -96,7 +97,7 @@ export const SubmitSignModal: React.FC<SubmitSignModalProps> = ({
       context,
       tags: [conceptName.trim(), 'Western Cape'],
       contributor: {
-        name: contributorName.trim() || 'Anonymous Signer',
+        name: stayAnonymous || !contributorName.trim() ? 'Anonymous Signer' : contributorName.trim(),
         province: 'Western Cape',
       },
       votes: {
@@ -154,10 +155,11 @@ export const SubmitSignModal: React.FC<SubmitSignModalProps> = ({
 
           <div>
             <label className="text-[11px] font-black uppercase text-zinc-400 block mb-1">
-              Healthcare Centre
+              Healthcare Centre <span className="text-rose-500">· Required</span>
             </label>
             <select
               value={facility}
+              required
               onChange={(e) => setFacility(e.target.value)}
               className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-bold ${
                 isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
@@ -167,6 +169,55 @@ export const SubmitSignModal: React.FC<SubmitSignModalProps> = ({
                 <option key={c.id} value={c.name}>{c.name}</option>
               ))}
             </select>
+            <p className="text-[10px] text-zinc-500 font-medium mt-1">
+              Always shared, even if you stay anonymous below — this is how we credit each clinic's community contributions.
+            </p>
+          </div>
+
+          {/* Contributor identity — anonymous by default. The hospital
+              field above is the only thing that's ever required. */}
+          <div>
+            <label className="text-[11px] font-black uppercase text-zinc-400 block mb-1">
+              Your name
+            </label>
+            <div className={`flex items-center gap-2 p-1 rounded-xl border mb-2 ${
+              isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setStayAnonymous(true)}
+                className={`flex-1 py-2 rounded-lg text-[11px] font-bold uppercase transition-colors cursor-pointer ${
+                  stayAnonymous
+                    ? 'bg-cyan-500 text-black'
+                    : isDark ? 'text-zinc-400' : 'text-zinc-600'
+                }`}
+              >
+                Stay anonymous
+              </button>
+              <button
+                type="button"
+                onClick={() => setStayAnonymous(false)}
+                className={`flex-1 py-2 rounded-lg text-[11px] font-bold uppercase transition-colors cursor-pointer ${
+                  !stayAnonymous
+                    ? 'bg-cyan-500 text-black'
+                    : isDark ? 'text-zinc-400' : 'text-zinc-600'
+                }`}
+              >
+                Share my name
+              </button>
+            </div>
+
+            {!stayAnonymous && (
+              <input
+                type="text"
+                placeholder="e.g. Thandeka M."
+                value={contributorName}
+                onChange={(e) => setContributorName(e.target.value)}
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold ${
+                  isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                }`}
+              />
+            )}
           </div>
 
           {/* Quick Camera Record */}
