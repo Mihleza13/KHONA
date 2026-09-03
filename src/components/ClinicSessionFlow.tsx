@@ -238,10 +238,10 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
 
             {/* Title & Prompt */}
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-[26px] font-bold tracking-tight leading-tight">
                 Clinic check-in
               </h1>
-              <p className={`text-xs sm:text-sm font-normal mt-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              <p className={`text-sm font-normal mt-1 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
                 Enter your patient folder number or phone number to begin.
               </p>
             </div>
@@ -253,7 +253,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
                   Patient folder number or phone
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
                   <input
                     type="text"
                     required
@@ -263,7 +263,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
                       setIdentifierInput(e.target.value);
                       if (authError) setAuthError(null);
                     }}
-                    className={`w-full pl-10 pr-4 py-3 rounded-2xl border text-sm font-medium focus:outline-none transition-colors ${
+                    className={`w-full pl-11 pr-4 py-3.5 rounded-full border text-sm font-medium focus:outline-none transition-colors ${
                       isDark 
                         ? 'bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500 focus:border-cyan-500' 
                         : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-cyan-500'
@@ -282,7 +282,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
               {/* Continue Button */}
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-2xl bg-zinc-950 dark:bg-white hover:opacity-90 text-white dark:text-zinc-950 font-semibold text-sm transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] mt-2"
+                className="w-full py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold text-sm transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] mt-2"
               >
                 <span>Continue</span>
                 <ArrowRight className="w-4 h-4" />
