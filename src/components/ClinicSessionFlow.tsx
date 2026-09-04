@@ -22,6 +22,7 @@ import {
   registerNewPatient, 
   saveActiveSession,
   authenticatePatient,
+  looksLikePartialName,
   authenticatePractitioner,
   getStoredPractitioner,
   saveStoredPractitioner
@@ -82,7 +83,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
 
     const query = identifierInput.trim();
     if (!query) {
-      setAuthError('Please enter your patient folder number or phone number');
+      setAuthError('Please enter your patient folder number, phone number, or full name');
       return;
     }
 
@@ -90,8 +91,10 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
     if (matched) {
       setSelectedPatient(matched);
       setAuthView('intake');
+    } else if (looksLikePartialName(query)) {
+      setAuthError(`"${query}" isn't enough to identify a patient on its own — there may be more than one. Please enter their full first and last name, or the folder number / phone number instead.`);
     } else {
-      setAuthError(`No record found for "${query}". Please check the folder number or register as a new patient.`);
+      setAuthError(`No record found for "${query}". Please check the folder number, use their full name, or register as a new patient.`);
     }
   };
 
@@ -243,7 +246,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
                 Clinic check-in
               </h1>
               <p className={`text-sm font-normal mt-1 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                Enter your patient folder number or phone number to begin.
+                Enter your patient folder number, phone number, or full name to begin.
               </p>
             </div>
 
@@ -251,14 +254,14 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
             <form onSubmit={handleIdentifySubmit} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
-                  Patient folder number or phone
+                  Patient folder number, phone, or full name
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
                   <input
                     type="text"
                     required
-                    placeholder="e.g. WC-8924 or 072 458 9120"
+                    placeholder="e.g. WC-8924, 072 458 9120, or Sipho Khumalo"
                     value={identifierInput}
                     onChange={(e) => {
                       setIdentifierInput(e.target.value);

@@ -183,23 +183,63 @@ export const clearStoredPractitioner = () => {
 };
 
 /**
- * Authenticates/identifies a patient by Folder Number (e.g. WC-8924), Phone number, or Name
+ * Authenticates/identifies a patient by Folder Number (e.g. WC-8924),
+ * Phone number, or full name.
+ *
+ * Name matching REQUIRES a full name (first + last, i.e. two or more
+ * words) and only succeeds on an exact match against exactly one
+ * patient. A single first name — e.g. "Sipho" — is deliberately never
+ * enough to authenticate: a real clinic roster can have several
+ * patients sharing a first name, and silently handing back whichever
+ * one happens to match first would expose the wrong patient's file.
+ * Folder numbers and phone numbers are unique identifiers, so those
+ * still work on their own.
  */
 export const authenticatePatient = (identifier: string): PatientProfile | null => {
-  const clean = identifier.trim().toLowerCase();
-  if (!clean) return null;
+  const raw = identifier.trim();
+  if (!raw) return null;
+  const clean = raw.toLowerCase();
+  const digitsOnly = raw.replace(/\D/g, '');
   const patients = getStoredPatients();
-  
-  const match = patients.find(
+
+  // Folder number — exact or punctuation-insensitive match.
+  const byId = patients.find(
     (p) =>
       p.id.toLowerCase() === clean ||
-      p.id.toLowerCase().replace(/[^a-z0-9]/g, '') === clean.replace(/[^a-z0-9]/g, '') ||
-      p.contactNumber.replace(/\D/g, '').endsWith(clean.replace(/\D/g, '')) && clean.replace(/\D/g, '').length >= 6 ||
-      p.fullName.toLowerCase() === clean ||
-      p.fullName.toLowerCase().includes(clean)
+      p.id.toLowerCase().replace(/[^a-z0-9]/g, '') === clean.replace(/[^a-z0-9]/g, '')
   );
+  if (byId) return byId;
 
-  return match || null;
+  // Phone number — suffix match on at least 6 digits, unique enough on its own.
+  if (digitsOnly.length >= 6) {
+    const byPhone = patients.find((p) => p.contactNumber.replace(/\D/g, '').endsWith(digitsOnly));
+    if (byPhone) return byPhone;
+  }
+
+  // Full name — only accepted with 2+ words, only if it matches exactly
+  // one patient. Ambiguous or partial name input never authenticates.
+  const nameWords = clean.split(/\s+/).filter(Boolean);
+  if (nameWords.length >= 2) {
+    const fullNameQuery = nameWords.join(' ');
+    const exactNameMatches = patients.filter(
+      (p) => p.fullName.toLowerCase().replace(/\s+/g, ' ').trim() === fullNameQuery
+    );
+    if (exactNameMatches.length === 1) return exactNameMatches[0];
+  }
+
+  return null;
+};
+
+/**
+ * True when a query looks like a bare first name (letters only, a
+ * single word) rather than a folder number, phone number, or full
+ * name — used to give a more useful hint than a flat "not found".
+ */
+export const looksLikePartialName = (identifier: string): boolean => {
+  const raw = identifier.trim();
+  if (!raw) return false;
+  const words = raw.split(/\s+/).filter(Boolean);
+  return words.length === 1 && /^[a-zA-Z'-]+$/.test(words[0]);
 };
 
 export const searchPatients = (query: string): PatientProfile[] => {
