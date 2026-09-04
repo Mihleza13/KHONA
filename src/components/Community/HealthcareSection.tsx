@@ -10,19 +10,35 @@ import {
   Filter,
   Eye,
   Video,
-  X
+  X,
+  Bell,
+  MessageSquare,
+  Mail,
+  BellOff
 } from 'lucide-react';
-import type { HealthcareFacility, HealthcareEvent } from '../../types';
+import type { HealthcareFacility, HealthcareEvent, RSVPContact, RSVPReminderMethod } from '../../types';
 import { 
   WESTERN_CAPE_PILOT_CLINICS, 
   UPCOMING_HEALTH_EVENTS 
 } from '../../data/communityData';
 import { useTheme } from '../../theme/ThemeContext';
+import { BottomSheet, SheetPrimaryButton, SheetSecondaryButton } from '../BottomSheet';
+
+const RSVP_CONTACTS_KEY = 'khona_clinic_event_rsvp_contacts_v1';
 
 export const HealthcareSection: React.FC = () => {
   const { isDark } = useTheme();
   const [selectedClinicId, setSelectedClinicId] = useState<string>('all');
   const [selectedEvent, setSelectedEvent] = useState<HealthcareEvent | null>(null);
+
+  // The event RSVP'ing for right now — opens the "who are you / how do
+  // you want to be reminded" sheet before the RSVP is actually recorded.
+  const [rsvpTarget, setRsvpTarget] = useState<HealthcareEvent | null>(null);
+  const [rsvpName, setRsvpName] = useState('');
+  const [rsvpMethod, setRsvpMethod] = useState<RSVPReminderMethod>('none');
+  const [rsvpPhone, setRsvpPhone] = useState('');
+  const [rsvpEmail, setRsvpEmail] = useState('');
+  const [rsvpFormError, setRsvpFormError] = useState<string | null>(null);
 
   // Events state with LocalStorage persistence for RSVPs
   const [events, setEvents] = useState<HealthcareEvent[]>(() => {
@@ -35,27 +51,100 @@ export const HealthcareSection: React.FC = () => {
     return UPCOMING_HEALTH_EVENTS;
   });
 
-  const handleToggleRSVP = (eventId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const persistEvents = (next: HealthcareEvent[]) => {
+    try {
+      localStorage.setItem('khona_clinic_events_rsvp_v3', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  };
+
+  const saveRsvpContact = (eventId: string, contact: RSVPContact) => {
+    try {
+      const raw = localStorage.getItem(RSVP_CONTACTS_KEY);
+      const all: Record<string, RSVPContact> = raw ? JSON.parse(raw) : {};
+      all[eventId] = contact;
+      localStorage.setItem(RSVP_CONTACTS_KEY, JSON.stringify(all));
+    } catch {
+      // ignore
+    }
+  };
+
+  const clearRsvpContact = (eventId: string) => {
+    try {
+      const raw = localStorage.getItem(RSVP_CONTACTS_KEY);
+      if (!raw) return;
+      const all: Record<string, RSVPContact> = JSON.parse(raw);
+      delete all[eventId];
+      localStorage.setItem(RSVP_CONTACTS_KEY, JSON.stringify(all));
+    } catch {
+      // ignore
+    }
+  };
+
+  const applyRsvp = (eventId: string, register: boolean) => {
     setEvents((prev) => {
       const next = prev.map((evt) => {
         if (evt.id === eventId) {
-          const isRegistered = !evt.isRegistered;
           return {
             ...evt,
-            isRegistered,
-            rsvpCount: isRegistered ? evt.rsvpCount + 1 : Math.max(0, evt.rsvpCount - 1),
+            isRegistered: register,
+            rsvpCount: register ? evt.rsvpCount + 1 : Math.max(0, evt.rsvpCount - 1),
           };
         }
         return evt;
       });
-      try {
-        localStorage.setItem('khona_clinic_events_rsvp_v3', JSON.stringify(next));
-      } catch {
-        // ignore
-      }
+      persistEvents(next);
       return next;
     });
+    setSelectedEvent((prev) => prev && prev.id === eventId ? {
+      ...prev,
+      isRegistered: register,
+      rsvpCount: register ? prev.rsvpCount + 1 : Math.max(0, prev.rsvpCount - 1),
+    } : prev);
+  };
+
+  // Tapping RSVP on an event that isn't registered yet opens the contact
+  // sheet first — RSVPing to attend doesn't tell us who's attending
+  // otherwise, and there's no way to send a reminder without asking.
+  const handleRsvpTap = (event: HealthcareEvent, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (event.isRegistered) {
+      applyRsvp(event.id, false);
+      clearRsvpContact(event.id);
+      return;
+    }
+    setRsvpName('');
+    setRsvpMethod('none');
+    setRsvpPhone('');
+    setRsvpEmail('');
+    setRsvpFormError(null);
+    setRsvpTarget(event);
+  };
+
+  const handleConfirmRsvp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rsvpTarget) return;
+
+    if (rsvpMethod === 'sms' && !rsvpPhone.trim()) {
+      setRsvpFormError('Add a phone number so we know where to send the reminder.');
+      return;
+    }
+    if (rsvpMethod === 'email' && !rsvpEmail.trim()) {
+      setRsvpFormError('Add an email address so we know where to send the reminder.');
+      return;
+    }
+
+    const contact: RSVPContact = {
+      name: rsvpName.trim() || undefined,
+      reminderMethod: rsvpMethod,
+      phone: rsvpMethod === 'sms' ? rsvpPhone.trim() : undefined,
+      email: rsvpMethod === 'email' ? rsvpEmail.trim() : undefined,
+    };
+
+    saveRsvpContact(rsvpTarget.id, contact);
+    applyRsvp(rsvpTarget.id, true);
+    setRsvpTarget(null);
   };
 
   const filteredEvents = selectedClinicId === 'all'
@@ -156,7 +245,7 @@ export const HealthcareSection: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={(e) => handleToggleRSVP(event.id, e)}
+                  onClick={(e) => handleRsvpTap(event, e)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
                     event.isRegistered
                       ? 'bg-cyan-500 text-black'
@@ -243,14 +332,7 @@ export const HealthcareSection: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    handleToggleRSVP(selectedEvent.id);
-                    setSelectedEvent((prev) => prev ? {
-                      ...prev,
-                      isRegistered: !prev.isRegistered,
-                      rsvpCount: !prev.isRegistered ? prev.rsvpCount + 1 : Math.max(0, prev.rsvpCount - 1)
-                    } : null);
-                  }}
+                  onClick={() => handleRsvpTap(selectedEvent)}
                   className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs transition-colors cursor-pointer"
                 >
                   {selectedEvent.isRegistered ? 'Attending ✓' : 'RSVP to Attend'}
@@ -259,6 +341,142 @@ export const HealthcareSection: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* RSVP contact sheet — the Community section otherwise never
+          knows who's using it. This is the one moment we actually ask,
+          and only what's needed to send a reminder if they want one. */}
+      {rsvpTarget && (
+        <BottomSheet
+          isOpen={Boolean(rsvpTarget)}
+          onClose={() => setRsvpTarget(null)}
+          title="Confirm your RSVP"
+          subtitle={rsvpTarget.title}
+          icon={<Bell className="w-5 h-5" />}
+          footer={
+            <>
+              <SheetPrimaryButton form="rsvp-contact-form" type="submit">
+                Confirm RSVP
+              </SheetPrimaryButton>
+              <SheetSecondaryButton onClick={() => setRsvpTarget(null)}>
+                Cancel
+              </SheetSecondaryButton>
+            </>
+          }
+        >
+          <form id="rsvp-contact-form" onSubmit={handleConfirmRsvp} className="space-y-4 pb-2">
+            <div>
+              <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
+                Your name (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="You can leave this blank to stay anonymous"
+                value={rsvpName}
+                onChange={(e) => setRsvpName(e.target.value)}
+                className={`w-full px-3.5 py-3 rounded-2xl border text-sm font-medium focus:outline-none transition-colors ${
+                  isDark
+                    ? 'bg-zinc-900 border-zinc-800 text-white placeholder-zinc-600 focus:border-cyan-500'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-cyan-500'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
+                How should we remind you?
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: 'sms' as const, label: 'SMS', icon: MessageSquare },
+                  { id: 'email' as const, label: 'Email', icon: Mail },
+                  { id: 'none' as const, label: "Don't remind me", icon: BellOff },
+                ]).map((opt) => {
+                  const Icon = opt.icon;
+                  const active = rsvpMethod === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setRsvpMethod(opt.id);
+                        setRsvpFormError(null);
+                      }}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border text-center transition-colors cursor-pointer ${
+                        active
+                          ? isDark
+                            ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300'
+                            : 'bg-cyan-50 border-cyan-600 text-cyan-950'
+                          : isDark
+                          ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-900'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                      }`}
+                    >
+                      <Icon className="w-4.5 h-4.5" />
+                      <span className="text-[11px] font-semibold leading-tight">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {rsvpMethod === 'sms' && (
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
+                  Phone number
+                </label>
+                <input
+                  type="tel"
+                  autoFocus
+                  placeholder="e.g. 072 458 9120"
+                  value={rsvpPhone}
+                  onChange={(e) => {
+                    setRsvpPhone(e.target.value);
+                    if (rsvpFormError) setRsvpFormError(null);
+                  }}
+                  className={`w-full px-3.5 py-3 rounded-2xl border text-sm font-medium focus:outline-none transition-colors ${
+                    isDark
+                      ? 'bg-zinc-900 border-zinc-800 text-white focus:border-cyan-500'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-cyan-500'
+                  }`}
+                />
+              </div>
+            )}
+
+            {rsvpMethod === 'email' && (
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  autoFocus
+                  placeholder="e.g. name@example.com"
+                  value={rsvpEmail}
+                  onChange={(e) => {
+                    setRsvpEmail(e.target.value);
+                    if (rsvpFormError) setRsvpFormError(null);
+                  }}
+                  className={`w-full px-3.5 py-3 rounded-2xl border text-sm font-medium focus:outline-none transition-colors ${
+                    isDark
+                      ? 'bg-zinc-900 border-zinc-800 text-white focus:border-cyan-500'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-cyan-500'
+                  }`}
+                />
+              </div>
+            )}
+
+            {rsvpFormError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+                {rsvpFormError}
+              </div>
+            )}
+
+            <p className="text-[11px] text-zinc-500 leading-relaxed">
+              We'll only use this to remind you about this event — it isn't linked to any patient file, and you can RSVP without giving either.
+            </p>
+          </form>
+        </BottomSheet>
       )}
     </div>
   );

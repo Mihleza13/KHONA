@@ -298,6 +298,19 @@ export interface HealthcareEvent {
   imageUrl?: string;
 }
 
+// Collected only at the moment someone RSVPs — the Community section
+// never knows who's using it otherwise, so this is the one place we
+// need to ask. Name is optional (an RSVP can stay anonymous); a contact
+// method is only required if they actually want a reminder.
+export type RSVPReminderMethod = 'sms' | 'email' | 'none';
+
+export interface RSVPContact {
+  name?: string;
+  reminderMethod: RSVPReminderMethod;
+  phone?: string;
+  email?: string;
+}
+
 export interface ClinicNotice {
   id: string;
   facilityId: string;
