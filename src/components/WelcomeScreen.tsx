@@ -133,7 +133,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <div className="flex items-center gap-3.5">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  isDark ? 'bg-zinc-900 text-cyan-400' : 'bg-zinc-100 text-zinc-700'
+                  isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-50 text-cyan-700'
                 }`}
               >
                 <Users className="w-4.5 h-4.5" />
