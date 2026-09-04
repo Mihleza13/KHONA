@@ -94,17 +94,30 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             type="button"
             id="welcome-btn-clinic"
             onClick={() => handleClinicClick?.()}
-            className="w-full group rounded-2xl p-4 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 transition-all duration-150 cursor-pointer flex items-center justify-between gap-4 active:scale-[0.99]"
+            className={`w-full group rounded-2xl p-4 border transition-all duration-150 cursor-pointer flex items-center justify-between gap-4 active:scale-[0.99] ${
+              isDark
+                ? 'bg-[#12161d] hover:bg-[#171c25] border-zinc-800 text-white'
+                : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-900'
+            }`}
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-cyan-400 flex items-center justify-center text-zinc-950 shrink-0">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-50 text-cyan-700'
+                }`}
+              >
                 <Stethoscope className="w-4.5 h-4.5" />
               </div>
-              <span className="text-sm font-semibold text-left">
-                {t.welcome?.continueToClinic || 'Continue to clinic'}
-              </span>
+              <div className="text-left">
+                <span className="text-sm font-semibold block">
+                  {t.welcome?.continueToClinic || 'Continue to clinic'}
+                </span>
+                <span className={`text-xs font-normal ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                  Check in for your appointment
+                </span>
+              </div>
             </div>
-            <ArrowRight className="w-4 h-4 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight className={`w-4 h-4 ${isDark ? 'text-zinc-500' : 'text-zinc-400'} group-hover:translate-x-0.5 transition-transform`} />
           </button>
 
           <button
