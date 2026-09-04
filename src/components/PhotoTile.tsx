@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 
 interface PhotoTileProps {
   icon: LucideIcon;
-  tone?: 'teal' | 'slate' | 'amber' | 'rose' | 'indigo';
+  tone?: 'teal' | 'slate' | 'amber' | 'rose' | 'indigo' | 'emerald';
   className?: string;
   children?: React.ReactNode;
 }
@@ -18,6 +18,7 @@ const TONES: Record<string, string> = {
   amber: 'from-[#3f2d0b] via-[#2a1f0e] to-[#0d0905]',
   rose: 'from-[#3f0b1f] via-[#2a0e18] to-[#0d0507]',
   indigo: 'from-[#1a1140] via-[#140e2a] to-[#05040d]',
+  emerald: 'from-[#0b3f1e] via-[#0e2a17] to-[#050d08]',
 };
 
 export const PhotoTile: React.FC<PhotoTileProps> = ({

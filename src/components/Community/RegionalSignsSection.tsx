@@ -6,7 +6,14 @@ import {
   Play, 
   RotateCcw,
   Building2,
-  Layers
+  Layers,
+  Coffee,
+  Sparkles,
+  Smartphone,
+  HeartPulse,
+  Briefcase,
+  Bus,
+  type LucideIcon
 } from 'lucide-react';
 import type { 
   SASLRegionalSign
@@ -20,6 +27,21 @@ import { SignDetailModal } from './SignDetailModal';
 import { SubmitSignModal } from './SubmitSignModal';
 import { PhotoTile } from '../PhotoTile';
 import { useTheme } from '../../theme/ThemeContext';
+
+// Every sign shares one context tag, so cards get a distinct icon + tone
+// per context instead of the same flat indigo block for every single
+// card — no real photography needed, just more visual signal.
+const CONTEXT_VISUALS: Record<SASLRegionalSign['context'], { icon: LucideIcon; tone: 'teal' | 'slate' | 'amber' | 'rose' | 'indigo' | 'emerald' }> = {
+  'Everyday': { icon: Coffee, tone: 'amber' },
+  'Slang & Pop Culture': { icon: Sparkles, tone: 'rose' },
+  'Technology & Social Media': { icon: Smartphone, tone: 'indigo' },
+  'Healthcare': { icon: HeartPulse, tone: 'teal' },
+  'Work & School': { icon: Briefcase, tone: 'slate' },
+  'Transport': { icon: Bus, tone: 'emerald' },
+};
+
+const getSignVisual = (context: SASLRegionalSign['context']) =>
+  CONTEXT_VISUALS[context] || { icon: Layers, tone: 'indigo' as const };
 
 interface RegionalSignsSectionProps {
   signs: SASLRegionalSign[];
@@ -274,7 +296,9 @@ export const RegionalSignsSection: React.FC<RegionalSignsSectionProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredSigns.map((sign) => (
+          {filteredSigns.map((sign) => {
+            const { icon: SignIcon, tone: signTone } = getSignVisual(sign.context);
+            return (
             <div
               key={sign.id}
               className={`rounded-2xl border overflow-hidden transition-all group ${
@@ -289,7 +313,7 @@ export const RegionalSignsSection: React.FC<RegionalSignsSectionProps> = ({
                 onClick={() => setActiveDetailSign(sign)}
                 className="relative w-full aspect-[4/5] cursor-pointer"
               >
-                <PhotoTile icon={Layers} tone="indigo" className="w-full h-full">
+                <PhotoTile icon={SignIcon} tone={signTone} className="w-full h-full">
                   <div className="relative h-full flex flex-col justify-between p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur text-white text-[10px] font-medium">
@@ -341,7 +365,7 @@ export const RegionalSignsSection: React.FC<RegionalSignsSectionProps> = ({
                 </div>
               </div>
             </div>
-          ))}
+          );})}
         </div>
       )}
 
