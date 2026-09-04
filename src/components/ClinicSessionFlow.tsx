@@ -22,6 +22,7 @@ import {
   registerNewPatient, 
   saveActiveSession,
   authenticatePatient,
+  authenticatePractitioner,
   getStoredPractitioner,
   saveStoredPractitioner
 } from '../utils/patientSessionService';
@@ -34,13 +35,7 @@ interface ClinicSessionFlowProps {
   onCancel: () => void;
 }
 
-type AuthView = 'identify' | 'register' | 'intake' | 'staff_pin' | 'practitioner_settings';
-
-// Lightweight deterrent so a patient using the kiosk can't casually open
-// or edit the attending practitioner's details. This is NOT real
-// authentication (there's no backend) — it just stops idle tampering.
-// Replace with proper staff login before any real deployment.
-const STAFF_PIN = '2468';
+type AuthView = 'identify' | 'register' | 'intake' | 'staff_login' | 'practitioner_settings';
 
 export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
   onStartConsultation,
@@ -57,9 +52,10 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
   const [editRole, setEditRole] = useState(practitioner.role || '');
   const [selectedFacilityId, setSelectedFacilityId] = useState(practitioner.facilityId || WESTERN_CAPE_PILOT_CLINICS[0].id);
 
-  // Staff PIN gate — must pass before viewing/editing practitioner details
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState<string | null>(null);
+  // Staff sign-in — practitioners log in with their own recognized
+  // HPCSA / SANC registration number. No PIN, no default identity.
+  const [staffRegInput, setStaffRegInput] = useState('');
+  const [staffLoginError, setStaffLoginError] = useState<string | null>(null);
 
   // Sub-view
   const [authView, setAuthView] = useState<AuthView>('identify');
@@ -134,15 +130,20 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
     setAuthView('identify');
   };
 
-  // Staff PIN check — gates access to viewing/editing practitioner details
-  const handlePinSubmit = (e: React.FormEvent) => {
+  // Staff sign-in — looks the entered HPCSA/SANC number up against the
+  // recognized roster. There is no PIN and nothing is ever defaulted.
+  const handleStaffLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === STAFF_PIN) {
-      setPinInput('');
-      setPinError(null);
-      setAuthView('practitioner_settings');
+    const match = authenticatePractitioner(staffRegInput);
+    if (match) {
+      setPractitioner(match);
+      saveStoredPractitioner(match);
+      setStaffRegInput('');
+      setStaffLoginError(null);
+      setLaunchError(null);
+      setAuthView(selectedPatient ? 'intake' : 'identify');
     } else {
-      setPinError('Incorrect staff PIN');
+      setStaffLoginError('That HPCSA / SANC number isn\'t recognized at this facility.');
     }
   };
 
@@ -151,8 +152,8 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
   const handleLaunchConsultation = () => {
     if (!selectedPatient) return;
     if (!practitioner.name?.trim()) {
-      setLaunchError('A staff member must sign in before a consultation can start.');
-      setAuthView('staff_pin');
+      setLaunchError('A staff member must sign in with their HPCSA / SANC number before a consultation can start.');
+      setAuthView('staff_login');
       return;
     }
 
@@ -229,7 +230,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
 
               <button
                 type="button"
-                onClick={() => setAuthView('staff_pin')}
+                onClick={() => setAuthView('staff_login')}
                 className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer whitespace-nowrap"
               >
                 {practitioner.name ? 'Change' : 'Staff sign-in'}
@@ -273,7 +274,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
               </div>
 
               {authError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{authError}</span>
                 </div>
@@ -465,7 +466,7 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
             </div>
 
             {launchError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{launchError}</span>
               </div>
@@ -500,53 +501,68 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
           </div>
         )}
 
-        {/* VIEW: STAFF PIN GATE — must pass before practitioner details
-            (even just a name/registration number) become visible or
-            editable. Keeps that information away from patients using
-            the same kiosk. */}
-        {authView === 'staff_pin' && (
+        {/* VIEW: STAFF SIGN-IN — practitioners identify themselves with
+            their own recognized HPCSA / SANC number, the same way
+            patients identify themselves. No PIN, no shared secret. */}
+        {authView === 'staff_login' && (
           <div className={`p-6 sm:p-8 rounded-3xl border space-y-6 transition-all ${
             isDark ? 'bg-[#101722] border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
           }`}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
-                <Lock className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-500 flex items-center justify-center font-bold">
+                <Stethoscope className="w-5 h-5" />
               </div>
               <div>
                 <h2 className="text-xl font-bold tracking-tight">Staff sign-in</h2>
                 <p className="text-xs text-zinc-500 font-normal">
-                  Enter the clinic staff PIN to continue
+                  Enter your HPCSA or SANC registration number
                 </p>
               </div>
             </div>
 
-            <form onSubmit={handlePinSubmit} className="space-y-4">
+            <form onSubmit={handleStaffLogin} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
-                  Staff PIN
+                  HPCSA / SANC number
                 </label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoFocus
-                  required
-                  value={pinInput}
-                  onChange={(e) => {
-                    setPinInput(e.target.value);
-                    if (pinError) setPinError(null);
-                  }}
-                  className={`w-full px-3.5 py-3 rounded-2xl border text-sm font-medium tracking-[0.3em] focus:outline-none transition-colors ${
-                    isDark
-                      ? 'bg-zinc-900 border-zinc-800 text-white focus:border-cyan-500'
-                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-cyan-500'
-                  }`}
-                />
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    type="text"
+                    autoFocus
+                    required
+                    placeholder="e.g. HPCSA MP-072891"
+                    value={staffRegInput}
+                    onChange={(e) => {
+                      setStaffRegInput(e.target.value);
+                      if (staffLoginError) setStaffLoginError(null);
+                    }}
+                    className={`w-full pl-11 pr-4 py-3.5 rounded-full border text-sm font-medium focus:outline-none transition-colors ${
+                      isDark
+                        ? 'bg-zinc-900 border-zinc-800 text-white focus:border-cyan-500'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-cyan-500'
+                    }`}
+                  />
+                </div>
               </div>
 
-              {pinError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{pinError}</span>
+              {staffLoginError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{staffLoginError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditPractisingNumber(staffRegInput);
+                      setStaffLoginError(null);
+                      setAuthView('practitioner_settings');
+                    }}
+                    className="text-[11px] font-semibold text-cyan-500 hover:underline cursor-pointer ml-6"
+                  >
+                    Not yet on the roster? Register your details
+                  </button>
                 </div>
               )}
 
@@ -554,8 +570,8 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setPinInput('');
-                    setPinError(null);
+                    setStaffRegInput('');
+                    setStaffLoginError(null);
                     setAuthView(selectedPatient ? 'intake' : 'identify');
                   }}
                   className="text-xs text-zinc-400 hover:text-white font-semibold cursor-pointer"
@@ -564,9 +580,9 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-zinc-950 dark:bg-white hover:opacity-90 text-white dark:text-zinc-950 font-semibold text-xs transition-all cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold text-xs transition-all cursor-pointer"
                 >
-                  Unlock
+                  Sign in
                 </button>
               </div>
             </form>
@@ -584,10 +600,10 @@ export const ClinicSessionFlow: React.FC<ClinicSessionFlowProps> = ({
               </div>
               <div>
                 <h2 className="text-xl font-bold tracking-tight">
-                  Medical practitioner setup
+                  Register your details
                 </h2>
                 <p className="text-xs text-zinc-500 font-normal">
-                  Configure attending healthcare practitioner and facility
+                  Not yet on the roster — add yourself as attending staff
                 </p>
               </div>
             </div>

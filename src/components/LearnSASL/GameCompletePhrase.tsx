@@ -64,7 +64,7 @@ export const GameCompletePhrase: React.FC<GameCompletePhraseProps> = ({
             ? 'bg-amber-100 border-amber-400 text-amber-900 min-w-[120px] text-center'
             : selectedOption === currentQ.missingWord
             ? 'bg-emerald-100 border-emerald-500 text-emerald-900 shadow-xs'
-            : 'bg-rose-100 border-rose-500 text-rose-900'
+            : 'bg-red-100 border-red-500 text-red-900'
         }`}>
           {selectedOption ? selectedOption : '______'}
         </span>
@@ -129,7 +129,7 @@ export const GameCompletePhrase: React.FC<GameCompletePhraseProps> = ({
             if (option === currentQ.missingWord) {
               style = 'bg-emerald-600 border-emerald-600 text-white shadow-md';
             } else if (option === selectedOption) {
-              style = 'bg-rose-500 border-rose-500 text-white';
+              style = 'bg-red-500 border-red-500 text-white';
             } else {
               style = 'bg-slate-100 border-slate-200 text-slate-400 opacity-60';
             }

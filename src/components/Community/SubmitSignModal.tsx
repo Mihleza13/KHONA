@@ -155,7 +155,7 @@ export const SubmitSignModal: React.FC<SubmitSignModalProps> = ({
 
           <div>
             <label className="text-[11px] font-black uppercase text-zinc-400 block mb-1">
-              Healthcare Centre <span className="text-rose-500">· Required</span>
+              Healthcare Centre <span className="text-red-500">· Required</span>
             </label>
             <select
               value={facility}

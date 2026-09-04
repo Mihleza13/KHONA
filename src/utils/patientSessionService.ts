@@ -116,8 +116,9 @@ export const saveStoredPatients = (patients: PatientProfile[]) => {
 // on a shared clinic kiosk means the NEXT patient's browser session could
 // read a previous doctor's name / registration number. Instead we use
 // sessionStorage (cleared the moment the browser tab/kiosk session ends)
-// and require the practitioner to explicitly sign in each session — there
-// is no default doctor.
+// and require the practitioner to sign in with their own recognized
+// HPCSA / SANC number each session — there is no default doctor and no
+// generic PIN.
 const PRACTITIONER_STORAGE_KEY = 'khona_clinic_practitioner_profile_v1';
 
 export const DEFAULT_PRACTITIONER: PractitionerProfile = {
@@ -125,6 +126,34 @@ export const DEFAULT_PRACTITIONER: PractitionerProfile = {
   practisingNumber: '',
   role: '',
   facilityId: '',
+};
+
+// Roster of practitioners recognized at the Western Cape pilot clinics.
+// Signing in checks the entered number against this list — nothing is
+// ever assumed or defaulted from a blank session.
+const RECOGNIZED_PRACTITIONERS: PractitionerProfile[] = [
+  { name: 'Dr. N. Dlamini', practisingNumber: 'HPCSA MP-072891', role: 'Attending Medical Officer', facilityId: 'clinic-groote-schuur' },
+  { name: 'Dr. K. Van Wyk', practisingNumber: 'HPCSA MP-061142', role: 'Attending Medical Officer', facilityId: 'clinic-groote-schuur' },
+  { name: 'Sr. B. Mthembu', practisingNumber: 'SANC 14892210', role: 'Professional Nurse', facilityId: 'clinic-groote-schuur' },
+  { name: 'Sister F. Jacobs', practisingNumber: 'SANC 19283411', role: 'Midwife', facilityId: 'clinic-groote-schuur' },
+];
+
+const normalizeRegNumber = (value: string): string =>
+  value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * Looks up a practitioner by their HPCSA or SANC registration number.
+ * This is the staff "login" — a recognized number is required, there is
+ * no PIN and no way to sign in as an unrecognized identity.
+ */
+export const authenticatePractitioner = (registrationNumber: string): PractitionerProfile | null => {
+  const clean = normalizeRegNumber(registrationNumber);
+  if (!clean) return null;
+
+  const match = RECOGNIZED_PRACTITIONERS.find(
+    (p) => normalizeRegNumber(p.practisingNumber || '') === clean
+  );
+  return match || null;
 };
 
 export const getStoredPractitioner = (): PractitionerProfile => {

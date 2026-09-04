@@ -723,7 +723,7 @@ export const ConsultationScreen: React.FC<ConsultationScreenProps> = ({
                 onClick={handleToggleListening}
                 className={`flex-1 py-4 px-5 rounded-2xl font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-md transition-all active:scale-95 cursor-pointer ${
                   isListening
-                    ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                    ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
                     : 'bg-teal-600 hover:bg-teal-700 text-white'
                 }`}
               >

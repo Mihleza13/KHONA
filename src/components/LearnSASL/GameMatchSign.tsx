@@ -111,7 +111,7 @@ export const GameMatchSign: React.FC<GameMatchSignProps> = ({
             if (option === currentQ.correctAnswer) {
               btnStyle = 'bg-emerald-600 border-emerald-600 text-white shadow-md';
             } else if (option === selectedAnswer) {
-              btnStyle = 'bg-rose-500 border-rose-500 text-white';
+              btnStyle = 'bg-red-500 border-red-500 text-white';
             } else {
               btnStyle = 'bg-slate-100 border-slate-200 text-slate-400 opacity-60';
             }

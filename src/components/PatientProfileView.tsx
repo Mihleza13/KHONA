@@ -118,8 +118,8 @@ export const PatientProfileView: React.FC<PatientProfileViewProps> = ({
           onClick={onSignOut}
           className={`w-full p-3.5 rounded-xl border font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
             isDark 
-              ? 'bg-zinc-900/80 border-zinc-800 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30' 
-              : 'bg-white border-zinc-200 text-rose-600 hover:bg-rose-50 hover:border-rose-200 shadow-2xs'
+              ? 'bg-zinc-900/80 border-zinc-800 text-red-400 hover:bg-red-500/10 hover:border-red-500/30' 
+              : 'bg-white border-zinc-200 text-red-600 hover:bg-red-50 hover:border-red-200 shadow-2xs'
           }`}
         >
           <LogOut className="w-4 h-4" />
