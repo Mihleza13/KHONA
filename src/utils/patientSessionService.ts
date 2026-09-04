@@ -130,12 +130,12 @@ export const DEFAULT_PRACTITIONER: PractitionerProfile = {
 
 // Roster of practitioners recognized at the Western Cape pilot clinics.
 // Signing in checks the entered number against this list — nothing is
-// ever assumed or defaulted from a blank session.
+// ever assumed or defaulted from a blank session, and no other number
+// (random or otherwise) will authenticate. Kept to a single demo
+// credential for the pilot showcase; add more entries here as real
+// staff are onboarded.
 const RECOGNIZED_PRACTITIONERS: PractitionerProfile[] = [
   { name: 'Dr. N. Dlamini', practisingNumber: 'HPCSA MP-072891', role: 'Attending Medical Officer', facilityId: 'clinic-groote-schuur' },
-  { name: 'Dr. K. Van Wyk', practisingNumber: 'HPCSA MP-061142', role: 'Attending Medical Officer', facilityId: 'clinic-groote-schuur' },
-  { name: 'Sr. B. Mthembu', practisingNumber: 'SANC 14892210', role: 'Professional Nurse', facilityId: 'clinic-groote-schuur' },
-  { name: 'Sister F. Jacobs', practisingNumber: 'SANC 19283411', role: 'Midwife', facilityId: 'clinic-groote-schuur' },
 ];
 
 const normalizeRegNumber = (value: string): string =>
